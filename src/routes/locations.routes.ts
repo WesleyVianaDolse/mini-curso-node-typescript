@@ -3,24 +3,9 @@ import knex from '../database/connection';
 
 const locationsRouter = Router();
 
-locationsRouter.get('/', async (request, response) => {
-    const locations = await knex('locations').select('*');
-
-    const serializedItems = locations.map(location => {
-        return {
-            id: location.id,
-            name: location.name,
-            email: location.email,
-            whatsapp: location.whatsapp,
-            city: location.city,
-            uf: location.uf
-        }
-    });
-
-    return response.json(serializedItems);
-});
-
+//Inserir arquivos na tabela locations
 locationsRouter.post('/', async (request, response) => {
+
     const {
         name,
         email,
@@ -48,21 +33,20 @@ locationsRouter.post('/', async (request, response) => {
     const newIds = await transaction('locations').insert(location);
 
     const location_id = newIds[0];
-    [1, 3, 7]
-    const locationItems = items.map(async (item_id: number) => {
-        const selectedItem = await transaction('items').where('id', item_id).first();
 
-        if (!selectedItem) {
-            return response.status(400).json({ message: 'Item não encontrado.' });
-        }
+    const locationItems = items
+        .map((item_id: number) => {
+            const selectedItem = transaction('items').where('id', item_id).first();
 
-        return {
-            item_id,
-            location_id
-        }
-    });
+            if (!selectedItem) {
+                return response.status(400).json({ message: 'Item not found.' });
+            }
 
-    console.log(locationItems);
+            return {
+                item_id,
+                location_id
+            }
+        });
 
     await transaction('location_items').insert(locationItems);
 
@@ -72,6 +56,25 @@ locationsRouter.post('/', async (request, response) => {
         id: location_id,
         ...location
     });
+
+});
+
+//Busca dados da location por ID
+locationsRouter.get('/:id', async (request, response) => {
+    const { id } = request.params;
+
+    const location = await knex('locations').where('id', id).first();
+
+    if (!location) {
+        return response.status(400).json({ message: 'Location não encontrada' });
+    }
+
+    const items = await knex('items')
+        .join('location_items', 'items.id', '=', 'location_items.item_id')
+        .where('location_items.location_id', id)
+        .select('items.title')
+
+    return response.json({ location, items });
 });
 
 export default locationsRouter;

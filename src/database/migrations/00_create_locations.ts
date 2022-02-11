@@ -14,7 +14,6 @@ export async function up(knex: Knex) {
     });
 }
 
-//funcção para exportar para o index
 export async function down(knex: Knex) {
     return knex.schema.dropTable('locations');
 }
